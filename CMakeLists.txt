@@ -399,6 +399,19 @@ elseif(UNIX)
       set(PKGCONFIG_CFLAGS "${PKGCONFIG_CFLAGS} -DPA_USE_SNDIO=1")
       set(PKGCONFIG_REQUIRES_PRIVATE "${PKGCONFIG_REQUIRES_PRIVATE} sndio")
     endif()
+
+    if(EMSCRIPTEN)
+      option(PA_USE_WEBAUDIO "Enable support for WebAudio" ON)
+
+      if(PA_USE_WEBAUDIO)
+        target_sources(PortAudio PRIVATE
+          src/hostapi/webaudio/pa_webaudio.c
+        )
+        target_compile_definitions(PortAudio PUBLIC PA_USE_WEBAUDIO=1)
+        set(PORTAUDIO_PUBLIC_HEADERS "${PORTAUDIO_PUBLIC_HEADERS}" include/pa_webaudio.h)
+        set(PKGCONFIG_CFLAGS "${PKGCONFIG_CFLAGS} -DPA_USE_WEBAUDIO=1")
+      endif()
+    endif()
   endif()
 endif()
 
