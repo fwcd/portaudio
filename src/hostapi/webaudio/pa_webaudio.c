@@ -1,6 +1,7 @@
 /*
  * Portable Audio I/O Library WebAudio implementation
  * Copyright (c) 2022 Adam Hilss
+ * Copyright (c) 2024 fwcd
  *
  * Based on the Open Source API proposed by Ross Bencina
  * Copyright (c) 1999-2002 Ross Bencina, Phil Burk
