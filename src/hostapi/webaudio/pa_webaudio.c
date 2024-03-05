@@ -133,7 +133,7 @@ PaError PaWebAudio_Initialize( PaUtilHostApiRepresentation **hostApi, PaHostApiI
     PaWebAudioHostApiRepresentation *webAudioHostApi;
     PaDeviceInfo *deviceInfoArray;
 
-    webAudioHostApi = (PaWebAudioHostApiRepresentation*)PaUtil_AllocateMemory( sizeof(PaWebAudioHostApiRepresentation) );
+    webAudioHostApi = (PaWebAudioHostApiRepresentation*)PaUtil_AllocateZeroInitializedMemory( sizeof(PaWebAudioHostApiRepresentation) );
     if( !webAudioHostApi )
     {
         result = paInsufficientMemory;
@@ -161,7 +161,7 @@ PaError PaWebAudio_Initialize( PaUtilHostApiRepresentation **hostApi, PaHostApiI
 
     if( deviceCount > 0 )
     {
-        (*hostApi)->deviceInfos = (PaDeviceInfo**)PaUtil_GroupAllocateMemory(
+        (*hostApi)->deviceInfos = (PaDeviceInfo**)PaUtil_GroupAllocateZeroInitializedMemory(
                 webAudioHostApi->allocations, sizeof(PaDeviceInfo*) * deviceCount );
         if( !(*hostApi)->deviceInfos )
         {
@@ -170,7 +170,7 @@ PaError PaWebAudio_Initialize( PaUtilHostApiRepresentation **hostApi, PaHostApiI
         }
 
         /* allocate all device info structs in a contiguous block */
-        deviceInfoArray = (PaDeviceInfo*)PaUtil_GroupAllocateMemory(
+        deviceInfoArray = (PaDeviceInfo*)PaUtil_GroupAllocateZeroInitializedMemory(
                 webAudioHostApi->allocations, sizeof(PaDeviceInfo) * deviceCount );
         if( !deviceInfoArray )
         {
@@ -180,7 +180,7 @@ PaError PaWebAudio_Initialize( PaUtilHostApiRepresentation **hostApi, PaHostApiI
 
         for( i=0; i < deviceCount; ++i )
         {
-            char* deviceName = (char*)PaUtil_GroupAllocateMemory( webAudioHostApi->allocations, strlen(kDefaultDeviceName) + 1 );
+            char* deviceName = (char*)PaUtil_GroupAllocateZeroInitializedMemory( webAudioHostApi->allocations, strlen(kDefaultDeviceName) + 1 );
             if( !deviceName )
             {
                 result = paInsufficientMemory;
@@ -473,7 +473,7 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
     if( (streamFlags & paPlatformSpecificFlags) != 0 )
         return paInvalidFlag; /* unexpected platform specific flag */
 
-    stream = (PaWebAudioStream*)PaUtil_AllocateMemory( sizeof(PaWebAudioStream) );
+    stream = (PaWebAudioStream*)PaUtil_AllocateZeroInitializedMemory( sizeof(PaWebAudioStream) );
     if( !stream )
     {
         result = paInsufficientMemory;
