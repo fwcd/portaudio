@@ -119,9 +119,9 @@ typedef struct
 PaWebAudioHostApiRepresentation;
 
 double GetSampleRate() {
-  return EM_ASM_INT({
-    return defaultSampleRate;
-  });
+    return EM_ASM_INT({
+        return defaultSampleRate;
+    });
 }
 
 PaError PaWebAudio_Initialize( PaUtilHostApiRepresentation **hostApi, PaHostApiIndex hostApiIndex )
@@ -442,7 +442,7 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
     }
 
     EM_ASM({
-      openAudio($0 > 0);
+        openAudio($0 > 0);
     }, inputChannelCount);
 
     /*
@@ -538,7 +538,7 @@ extern "C"
 #endif /* __cplusplus */
 
 float* EMSCRIPTEN_KEEPALIVE GetSampleBuffer() {
-  return g_sample_buffer;
+    return g_sample_buffer;
 }
 
 /*
@@ -567,24 +567,24 @@ void WebAudioCallback( void *inputBuffer, void *outputBuffer, PaWebAudioStream *
 
     if (stream->bufferProcessor.inputChannelCount > 0)
     {
-      PaUtil_SetInputFrameCount( &stream->bufferProcessor, frames );
-      PaUtil_SetNonInterleavedInputChannel( &stream->bufferProcessor,
-              0,
-              inputBuffer);
-      PaUtil_SetNonInterleavedInputChannel( &stream->bufferProcessor,
-              1,
-              inputBuffer + RENDER_CHANNEL_SIZE);
+        PaUtil_SetInputFrameCount( &stream->bufferProcessor, frames );
+        PaUtil_SetNonInterleavedInputChannel( &stream->bufferProcessor,
+                0,
+                inputBuffer);
+        PaUtil_SetNonInterleavedInputChannel( &stream->bufferProcessor,
+                1,
+                inputBuffer + RENDER_CHANNEL_SIZE);
     }
 
     if (stream->bufferProcessor.outputChannelCount > 0)
     {
-      PaUtil_SetOutputFrameCount( &stream->bufferProcessor, frames );
-      PaUtil_SetNonInterleavedOutputChannel( &stream->bufferProcessor,
-              0,
-              outputBuffer);
-      PaUtil_SetNonInterleavedOutputChannel( &stream->bufferProcessor,
-              1,
-              outputBuffer + RENDER_CHANNEL_SIZE);
+        PaUtil_SetOutputFrameCount( &stream->bufferProcessor, frames );
+        PaUtil_SetNonInterleavedOutputChannel( &stream->bufferProcessor,
+                0,
+                outputBuffer);
+        PaUtil_SetNonInterleavedOutputChannel( &stream->bufferProcessor,
+                1,
+                outputBuffer + RENDER_CHANNEL_SIZE);
     }
 
     callbackResult = paContinue;
@@ -645,7 +645,7 @@ static PaError CloseStream( PaStream* s )
     PaUtil_FreeMemory( stream );
 
     EM_ASM({
-      closeAudio();
+        closeAudio();
     });
 
     return result;
