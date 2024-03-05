@@ -411,6 +411,11 @@ elseif(UNIX)
         set(PORTAUDIO_PUBLIC_HEADERS "${PORTAUDIO_PUBLIC_HEADERS}" include/pa_webaudio.h)
         set(PKGCONFIG_CFLAGS "${PKGCONFIG_CFLAGS} -DPA_USE_WEBAUDIO=1")
       endif()
+
+      # This makes it easy to run the examples. The default output format is .js
+      # and is set in the Emscripten toolchain file, so it cannot be overriden
+      # from the command-line with -DCMAKE_EXECUTABLE_SUFFIX.
+      set(CMAKE_EXECUTABLE_SUFFIX ".html")
     endif()
   endif()
 endif()
