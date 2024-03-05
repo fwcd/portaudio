@@ -150,7 +150,7 @@ PaError PaWebAudio_Initialize( PaUtilHostApiRepresentation **hostApi, PaHostApiI
     *hostApi = &webAudioHostApi->inheritedHostApiRep;
     (*hostApi)->info.structVersion = 1;
     (*hostApi)->info.type = paInDevelopment;            /* IMPLEMENT ME: change to correct type id */
-    (*hostApi)->info.name = "WebAudio";
+    (*hostApi)->info.name = "Web Audio";
 
     (*hostApi)->info.defaultInputDevice = 0;
     (*hostApi)->info.defaultOutputDevice = 0;
