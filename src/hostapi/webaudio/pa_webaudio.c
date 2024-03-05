@@ -116,14 +116,102 @@ typedef struct
     PaUtilStreamInterface blockingStreamInterface;
 
     PaUtilAllocationGroup *allocations;
+
+    // An identifier referencing the AudioContext (which is managed on the JS side)
+    int contextId;
 }
 PaWebAudioHostApiRepresentation;
 
-double GetSampleRate() {
-    return EM_ASM_INT({
-        return defaultSampleRate;
-    });
-}
+EM_JS(void, Js_Initialize, (), {
+    if (!globalThis.__portaudio) {
+        globalThis.__portaudio = {
+            contexts: new Map(),
+            nodes: new Map(),
+            nextId: 0,
+
+            createContext: function() {
+                const id = this.nextId++;
+                this.contexts.set(id, new AudioContext());
+                return id;
+            },
+
+            deleteContext: function(id) {
+                this.contexts.delete(id);
+            },
+
+            getContext: function(id) {
+                return this.contexts.get(id);
+            },
+
+            createScriptProcessorNode: function(contextId, bufferSize, outputChannels) {
+                const id = this.nextId++;
+                const context = this.getContext(contextId);
+                const node = context.createScriptProcessor(bufferSize, 0 /* inputChannels */, outputChannels);
+                const callback = Module.cwrap('AudioCallback', 'void', []);
+                const sampleBuffer = Module.ccall('GetSampleBuffer', 'Float32Array', []);
+                node.addEventListener("audioprocess", (e) => {
+                    callback();
+                    for (let channel = 0; channel < outputChannels; channel++) {
+                        const buffer = outputBuffer.getChannelData(channel);
+                        for (let i = 0; i < sampleBuffer.length; i++) {
+                            // We assume that `sampleBuffer` is interleaved
+                            buffer[i] = sampleBuffer[i * outputChannels + channel];
+                        }
+                    }
+                });
+                this.nodes.set(id, node);
+                return id;
+            },
+
+            getNode: function(id) {
+                return this.nodes.get(id);
+            },
+
+            connectNodeToDestination: function(id) {
+                const node = this.getNode(id);
+                const context = node.context;
+                node.connect(context.destination);
+            },
+
+            disconnectNode: function(id) {
+                const node = this.getNode(id);
+                node.disconnect();
+            },
+
+            deleteNode: function(id) {
+                this.nodes.delete(id);
+            },
+        };
+    }
+});
+
+EM_JS(int, Js_CreateContext, (), {
+    return globalThis.__portaudio.createContext();
+});
+
+EM_JS(void, Js_DeleteContext, (int id), {
+    globalThis.__portaudio.deleteContext(id);
+});
+
+EM_JS(double, Js_GetSampleRate, (int id), {
+    return globalThis.__portaudio.getContext(id).sampleRate;
+});
+
+EM_JS(int, Js_CreateScriptProcessorNode, (int contextId, int bufferSize, int outputChannels), {
+    return globalThis.__portaudio.createScriptProcessorNode(contextId, bufferSize, outputChannels);
+});
+
+EM_JS(void, Js_ConnectNodeToDestination, (int id), {
+    globalThis.__portaudio.connectNodeToDestination(id);
+});
+
+EM_JS(void, Js_DisconnectNode, (int id), {
+    globalThis.__portaudio.disconnectNode(id);
+});
+
+EM_JS(void, Js_DeleteNode, (int id), {
+    globalThis.__portaudio.deleteNode(id);
+});
 
 PaError PaWebAudio_Initialize( PaUtilHostApiRepresentation **hostApi, PaHostApiIndex hostApiIndex )
 {
@@ -157,6 +245,11 @@ PaError PaWebAudio_Initialize( PaUtilHostApiRepresentation **hostApi, PaHostApiI
     (*hostApi)->info.defaultOutputDevice = 0;
 
     (*hostApi)->info.deviceCount = 0;
+
+    Js_Initialize();
+    webAudioHostApi->contextId = Js_CreateContext();
+
+    double sampleRate = Js_GetSampleRate(webAudioHostApi->contextId);
 
     deviceCount = 1;
 
@@ -202,7 +295,7 @@ PaError PaWebAudio_Initialize( PaUtilHostApiRepresentation **hostApi, PaHostApiI
             deviceInfo->defaultHighInputLatency = 1.;  /* IMPLEMENT ME */
             deviceInfo->defaultHighOutputLatency = 1.;  /* IMPLEMENT ME */
 
-            deviceInfo->defaultSampleRate = GetSampleRate();
+            deviceInfo->defaultSampleRate = sampleRate;
 
             (*hostApi)->deviceInfos[i] = deviceInfo;
             ++(*hostApi)->info.deviceCount;
@@ -244,6 +337,8 @@ error:
 static void Terminate( struct PaUtilHostApiRepresentation *hostApi )
 {
     PaWebAudioHostApiRepresentation *webAudioHostApi = (PaWebAudioHostApiRepresentation*)hostApi;
+
+    Js_DeleteContext(webAudioHostApi->contextId);
 
     if( webAudioHostApi->allocations )
     {
@@ -359,6 +454,8 @@ typedef struct PaWebAudioStream
     bool isActive;
     bool enableInput;
     bool enableOutput;
+
+    int nodeId;
 }
 PaWebAudioStream;
 
@@ -442,10 +539,6 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
         outputSampleFormat = hostOutputSampleFormat = paFloat32; /* Suppress 'uninitialized var' warnings. */
     }
 
-    EM_ASM({
-        openAudio($0 > 0);
-    }, inputChannelCount);
-
     /*
         IMPLEMENT ME:
 
@@ -520,6 +613,7 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
     stream->streamRepresentation.streamInfo.sampleRate = sampleRate;
 
     stream->isActive = 0;
+    stream->nodeId = Js_CreateScriptProcessorNode(webAudioHostApi->contextId, SAMPLE_BUFFER_SAMPLES, outputChannelCount);
 
     *s = (PaStream*)stream;
     g_web_audio_stream = stream;
@@ -639,15 +733,14 @@ static PaError CloseStream( PaStream* s )
     PaError result = paNoError;
     PaWebAudioStream *stream = (PaWebAudioStream*)s;
 
+    Js_DisconnectNode(stream->nodeId);
+    Js_DeleteNode(stream->nodeId);
+
     g_web_audio_stream = NULL;
 
     PaUtil_TerminateBufferProcessor( &stream->bufferProcessor );
     PaUtil_TerminateStreamRepresentation( &stream->streamRepresentation );
     PaUtil_FreeMemory( stream );
-
-    EM_ASM({
-        closeAudio();
-    });
 
     return result;
 }
@@ -662,6 +755,7 @@ static PaError StartStream( PaStream *s )
     PaWebAudioStream *stream = (PaWebAudioStream*)s;
 
     PaUtil_ResetBufferProcessor( &stream->bufferProcessor );
+    Js_ConnectNodeToDestination(stream->nodeId);
 
     stream->isActive = 1;
 
