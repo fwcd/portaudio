@@ -140,6 +140,10 @@ EM_JS(void, Js_Initialize, (), {
             },
 
             getContext: function(id) {
+                const context = this.contexts.get(id);
+                if (!context) {
+                    console.error(`Could not find context with id ${id}`);
+                }
                 return this.contexts.get(id);
             },
 
@@ -164,7 +168,11 @@ EM_JS(void, Js_Initialize, (), {
             },
 
             getNode: function(id) {
-                return this.nodes.get(id);
+                const node = this.nodes.get(id);
+                if (!node) {
+                    console.error(`Could not find node with id ${id}`);
+                }
+                return node;
             },
 
             connectNodeToDestination: function(id) {
