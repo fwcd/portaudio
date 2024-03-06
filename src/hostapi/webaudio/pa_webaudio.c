@@ -175,6 +175,11 @@ EM_JS(void, Js_Initialize, (), {
                 return node;
             },
 
+            startNode: function(id) {
+                const node = this.getNode(id);
+                node.start();
+            },
+
             connectNodeToDestination: function(id) {
                 const node = this.getNode(id);
                 const context = node.context;
@@ -207,6 +212,10 @@ EM_JS(double, Js_GetSampleRate, (int id), {
 
 EM_JS(int, Js_CreateScriptProcessorNode, (int contextId, int bufferSize, int outputChannels), {
     return globalThis.__portaudio.createScriptProcessorNode(contextId, bufferSize, outputChannels);
+});
+
+EM_JS(void, Js_StartNode, (int id), {
+    globalThis.__portaudio.startNode(id);
 });
 
 EM_JS(void, Js_ConnectNodeToDestination, (int id), {
@@ -763,7 +772,9 @@ static PaError StartStream( PaStream *s )
     PaWebAudioStream *stream = (PaWebAudioStream*)s;
 
     PaUtil_ResetBufferProcessor( &stream->bufferProcessor );
+
     Js_ConnectNodeToDestination(stream->nodeId);
+    Js_StartNode(stream->nodeId);
 
     stream->isActive = 1;
 
